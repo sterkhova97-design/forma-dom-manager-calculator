@@ -2,31 +2,22 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Калькулятор для менеджеров — Forma Dom</title>
   <meta name="description" content="Предварительный расчёт стоимости мебели Forma Dom">
   <link rel="stylesheet" href="manager-v1.css">
 
-  <style>
-    #fd-calculator-root button.fd-primary,
-    #fd-calculator-root button.fd-submit-big,
-    #fd-calculator-root button.fd-secondary{
-      border-radius:999px!important;
-      min-height:62px!important;
-      background:#46281E!important;
-      color:#fff!important;
-      text-transform:none!important;
-      font-size:18px!important;
-      font-weight:400!important;
-    }
-  </style>
+
 </head>
 <body>
   <main id="fd-calculator-root"></main>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="shared-history-config.js"></script>
+  <script src="shared-history.js"></script>
   <script src="manager-v1.js" defer></script>
   <script src="site-catalog-data.js" defer></script>
   <script src="site-catalog.js" defer></script>
+  <script src="price-editor.js" defer></script>
 </body>
 </html>

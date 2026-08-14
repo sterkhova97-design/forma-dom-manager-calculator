@@ -841,3 +841,6 @@ body{
   cursor:wait !important;
   transform:none !important;
 }
+
+/* v2.4 — unified compact button shape */
+#fd-calculator-root button.fd-primary,#fd-calculator-root button.fd-submit-big,#fd-calculator-root button.fd-secondary{min-height:44px!important;height:auto!important;border-radius:14px!important;font-size:13px!important;padding:10px 14px!important;margin-top:0!important}

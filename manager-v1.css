@@ -858,3 +858,193 @@ body{
 .fd-catalog-close{position:absolute;right:14px;top:12px;border:0;background:transparent;font-size:30px;cursor:pointer;color:#46281E}.fd-catalog-config-head{display:grid;grid-template-columns:160px 1fr;gap:18px;align-items:center;margin-bottom:20px}.fd-catalog-config-photo{aspect-ratio:1.25/1;background:#eee5dc;border-radius:16px;overflow:hidden}.fd-catalog-config-photo img{width:100%;height:100%;object-fit:cover}.fd-catalog-config-head h2{margin:0 0 6px;color:#46281E}
 .fd-catalog-config-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fd-catalog-config-grid label{display:flex;flex-direction:column;gap:6px;font-size:13px}.fd-catalog-config-grid input,.fd-catalog-config-grid select{border:1px solid #d9cec4;border-radius:12px;padding:11px 12px;background:#fff;font:inherit;width:100%;box-sizing:border-box}.fd-catalog-calc{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ded3c9;border-bottom:1px solid #ded3c9;padding:16px 0;margin:20px 0}.fd-catalog-calc strong{font-size:22px;color:#46281E}.fd-catalog-add{width:100%}
 @media(max-width:800px){.fd-catalog-grid{grid-template-columns:1fr}.fd-catalog-config-grid{grid-template-columns:1fr}.fd-catalog-config-head{grid-template-columns:110px 1fr}}
+
+/* v2.2 — редактор всех цен */
+.fd-price-editor{position:fixed;inset:0;background:rgba(35,20,15,.58);z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px}
+.fd-price-editor[hidden]{display:none!important}
+.fd-price-editor-dialog{width:min(1180px,96vw);height:min(860px,94vh);background:#FCF7ED;color:#46281E;border:1px solid rgba(70,40,30,.18);border-radius:24px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.25)}
+.fd-price-editor-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;padding:24px 26px 12px}.fd-price-editor-head h2{margin:0 0 5px;font-size:25px}.fd-price-editor-head p{margin:0;opacity:.7;font-size:13px}.fd-price-editor-close{border:0;background:transparent;color:#46281E;font-size:34px;line-height:1;cursor:pointer;padding:0 4px}
+.fd-price-editor-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 26px 14px}.fd-price-editor-tabs button{border:1px solid #d9cfc5;background:#fffaf4;color:#46281E;border-radius:14px;padding:12px;font:inherit;cursor:pointer}.fd-price-editor-tabs button.active{background:#46281E;color:#fff;border-color:#46281E}
+.fd-price-editor-tools{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:8px;padding:0 26px 14px}.fd-price-editor-tools input{height:44px;border:1px solid #d9cfc5;border-radius:12px;background:#fff;padding:0 13px;font:inherit}.fd-price-editor-tools button,.fd-price-import-label{height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 15px;border:1px solid #d9cfc5;border-radius:12px;background:#fffaf4;color:#46281E;font:inherit;cursor:pointer;white-space:nowrap}
+.fd-price-editor-count{padding:0 26px 8px;font-size:12px;opacity:.65}.fd-price-editor-table-wrap{flex:1;overflow:auto;border-top:1px solid rgba(70,40,30,.12);border-bottom:1px solid rgba(70,40,30,.12)}.fd-price-editor-table{width:100%;border-collapse:collapse;font-size:13px}.fd-price-editor-table th{position:sticky;top:0;background:#f4ecdf;z-index:1;text-align:left;padding:11px 16px;border-bottom:1px solid rgba(70,40,30,.18)}.fd-price-editor-table td{padding:9px 16px;border-bottom:1px solid rgba(70,40,30,.09);vertical-align:middle}.fd-price-editor-table th:nth-child(1){width:26%}.fd-price-editor-table th:nth-child(3){width:180px}.fd-price-value{display:grid;grid-template-columns:1fr 28px;align-items:center;gap:6px}.fd-price-value input{width:100%;height:38px;border:1px solid #d9cfc5;border-radius:9px;background:#fff;padding:0 9px;text-align:right;font:inherit;color:#46281E}
+.fd-price-editor-footer{display:flex;justify-content:flex-end;gap:9px;padding:14px 26px 6px}.fd-price-editor-footer button{border:0;border-radius:999px;min-height:46px;padding:0 24px;font:inherit;cursor:pointer}.fd-price-reset{background:#eee5da;color:#46281E}.fd-price-save{background:#46281E;color:#fff}.fd-price-editor-note{padding:5px 26px 18px;font-size:12px;opacity:.72}
+@media(max-width:700px){.fd-price-editor{padding:8px}.fd-price-editor-dialog{height:96vh;border-radius:16px}.fd-price-editor-tools{grid-template-columns:1fr}.fd-price-editor-tabs{grid-template-columns:1fr}.fd-price-editor-table th:nth-child(1){width:auto}.fd-price-editor-table th:nth-child(3){width:130px}.fd-price-editor-table td,.fd-price-editor-table th{padding:8px}.fd-price-editor-footer{flex-direction:column}.fd-price-editor-footer button{width:100%}}
+
+
+/* ===== v2.3 — stable mobile viewport (Safari/iPhone) ===== */
+html{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+  overscroll-behavior-x:none;
+}
+#fd-calculator-root{
+  width:100%;
+  max-width:100%;
+  overflow-x:clip;
+}
+
+/* Long labels/options must never expand the whole page. */
+#fd-calculator-root *,
+.fd-catalog-modal *,
+.fd-price-editor *{
+  min-width:0;
+}
+#fd-calculator-root img,
+.fd-catalog-modal img,
+.fd-price-editor img{
+  max-width:100%;
+}
+#fd-calculator-root input,
+#fd-calculator-root select,
+#fd-calculator-root textarea,
+.fd-catalog-modal input,
+.fd-catalog-modal select,
+.fd-catalog-modal textarea,
+.fd-price-editor input,
+.fd-price-editor select,
+.fd-price-editor textarea{
+  max-width:100%;
+}
+
+@media(max-width:760px){
+  /* iOS Safari auto-zooms focused fields smaller than 16px. */
+  input,
+  select,
+  textarea,
+  .fd-input,
+  .fd-select,
+  .fd-line-input,
+  .fd-textarea,
+  .fd-manager-field input,
+  .fd-manager-field select,
+  .fd-manager-field textarea,
+  .fd-catalog-toolbar input,
+  .fd-catalog-toolbar select,
+  .fd-catalog-config-grid input,
+  .fd-catalog-config-grid select,
+  .fd-history-head input,
+  .fd-price-editor input,
+  .fd-price-editor select,
+  .fd-price-editor textarea{
+    font-size:16px !important;
+  }
+
+  .fd-shell{
+    width:100%;
+    max-width:100%;
+    padding-left:10px;
+    padding-right:10px;
+    margin:0;
+    overflow-x:hidden;
+  }
+
+  .fd-main,
+  .fd-config,
+  .fd-summary,
+  .fd-products-card,
+  .fd-manager-panel,
+  .fd-history,
+  .fd-lead{
+    width:100%;
+    max-width:100%;
+  }
+
+  /* Fixed overlays track the visual viewport without widening the document. */
+  .fd-catalog-modal,
+  .fd-price-editor{
+    width:100%;
+    max-width:100vw;
+    padding-left:8px;
+    padding-right:8px;
+    overflow-x:hidden;
+  }
+  .fd-catalog-dialog,
+  .fd-price-editor-dialog{
+    width:100%;
+    max-width:100%;
+  }
+
+  /* Only the price table may scroll sideways; the page itself may not. */
+  .fd-price-editor-table-wrap{
+    max-width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+
+/* ===== v2.4 — единый стиль кнопок + компактная мобильная шапка ===== */
+#fd-calculator-root button.fd-primary,
+#fd-calculator-root button.fd-submit-big,
+#fd-calculator-root button.fd-secondary,
+#fd-calculator-root .fd-manager-bar button,
+#fd-calculator-root .fd-manager-actions button{
+  width:100% !important;
+  min-height:44px !important;
+  height:auto !important;
+  margin-top:0 !important;
+  padding:10px 14px !important;
+  border-radius:14px !important;
+  border:1px solid #d8d0c8 !important;
+  box-shadow:none !important;
+  font-family:"Century Gothic","Apple Gothic","Trebuchet MS",Arial,sans-serif !important;
+  font-size:13px !important;
+  line-height:1.2 !important;
+  font-weight:400 !important;
+  text-transform:none !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-sizing:border-box !important;
+}
+#fd-calculator-root button.fd-primary,
+#fd-calculator-root button.fd-submit-big,
+#fd-calculator-root .fd-manager-bar .fd-new-kp,
+#fd-calculator-root .fd-manager-actions .fd-create-pdf{
+  background:#46281E !important;
+  color:#fff !important;
+  border-color:#46281E !important;
+}
+#fd-calculator-root button.fd-secondary,
+#fd-calculator-root .fd-manager-bar .fd-open-history,
+#fd-calculator-root .fd-manager-actions .fd-save-kp{
+  background:#fff !important;
+  color:#46281E !important;
+}
+#fd-calculator-root .fd-manager-bar{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:8px !important;
+  width:100% !important;
+  margin:0 0 14px !important;
+}
+#fd-calculator-root .fd-manager-bar button{min-width:0 !important}
+#fd-calculator-root .fd-manager-actions{display:grid !important;grid-template-columns:1fr 1fr !important;gap:8px !important}
+#fd-calculator-root .fd-manager-actions button{min-width:0 !important}
+#fd-calculator-root .fd-small-btn{
+  border:1px solid #d8d0c8 !important;background:#fff !important;color:#46281E !important;
+  border-radius:14px !important;padding:8px 12px !important;font-family:inherit !important;font-size:12px !important;
+}
+#fd-calculator-root .fd-small-btn.primary{background:#46281E !important;color:#fff !important;border-color:#46281E !important}
+#fd-calculator-root .fd-history-sync-note{font-size:11px;color:var(--fd-muted);margin:-7px 0 14px}
+#fd-calculator-root .fd-history-sync-note.shared{color:#365b3c}
+#fd-calculator-root .fd-history-sync-note.local{color:#8a5a22}
+
+@media(max-width:760px){
+  #fd-calculator-root .fd-manager-bar,
+  #fd-calculator-root .fd-manager-actions{grid-template-columns:1fr !important}
+  #fd-calculator-root button.fd-primary,
+  #fd-calculator-root button.fd-submit-big,
+  #fd-calculator-root button.fd-secondary,
+  #fd-calculator-root .fd-manager-bar button,
+  #fd-calculator-root .fd-manager-actions button{
+    min-height:44px !important;font-size:13px !important;border-radius:14px !important;padding:10px 12px !important;
+  }
+}

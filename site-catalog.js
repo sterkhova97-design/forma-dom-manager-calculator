@@ -100,7 +100,7 @@
         const text=String(item||'').trim();
         if(!text) return null;
         const m=text.match(/^(.*?)(?:=\s*\+?(-?[\d\s.,]+))?$/);
-        const optionLabel=(m?.[1]||text).trim();
+        const optionLabel=(m?.[1]||text).trim().replace(/\s*[+—-]?\s*\d[\d\s]*(?:руб\.?|₽|р\.?)\s*$/i,'').trim();
         const priceDelta=m?.[2] ? Number(String(m[2]).replace(/\s/g,'').replace(',','.'))||0 : 0;
         return {id:`m${groupIndex}_${optionIndex}`,label:optionLabel,priceDelta};
       }).filter(Boolean);

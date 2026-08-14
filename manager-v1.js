@@ -940,6 +940,7 @@ function renderShell() {
       </section>
       <section class="fd-card fd-history" id="fd-history">
         <div class="fd-history-head"><h2 class="fd-manager-title" style="margin:0">История КП</h2><input id="historySearch" placeholder="Поиск по клиенту"></div>
+        <div class="fd-history-sync-note"></div>
         <div class="fd-history-list"></div>
       </section>
     </div>`;
@@ -989,12 +990,51 @@ function managerHeader(){const g=id=>document.getElementById(id);return {kpName:
 function managerTotals(){const subtotal=totalPrice();const h=managerHeader();const discount=subtotal*(h.discountPercent/100);const after=subtotal-discount;const vat=h.showVat?after*.22:0;return{subtotal,discount,after,vat,grand:after+vat+h.deliveryPrice}}
 function updateManagerTotal(){update();}
 function managerStatus(t){const e=root.querySelector('.fd-manager-status');if(e){e.textContent=t;e.style.display='block'}}
-function getHistory(){try{return JSON.parse(localStorage.getItem(MANAGER_STORAGE_KEY)||'[]')}catch{return[]}}
-function setHistory(v){localStorage.setItem(MANAGER_STORAGE_KEY,JSON.stringify(v))}
+let historyMetaCache=[];
+function historySyncStatus(text,kind){const e=root?.querySelector('.fd-history-sync-note');if(!e)return;e.textContent=text||'';e.className='fd-history-sync-note '+(kind||'')}
+async function getHistory(){
+  const rows=await window.ManagerStorage.list();
+  historyMetaCache=rows||[];
+  return historyMetaCache;
+}
 function kpSnapshot(){return {id:state.currentKpId||`kp_${Date.now()}`,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),header:managerHeader(),items:JSON.parse(JSON.stringify(state.items)),totals:managerTotals()}}
-function saveManagerKp(andPdf){if(state.product){managerStatus('Сначала добавьте редактируемое изделие в КП.');return}if(!state.items.length){managerStatus('Добавьте хотя бы одно изделие.');return}if(!managerHeader().clientName){managerStatus('Укажите клиента.');document.getElementById('clientName')?.focus();return}let all=getHistory();const snap=kpSnapshot();const old=all.find(x=>x.id===snap.id);if(old)snap.createdAt=old.createdAt;const i=all.findIndex(x=>x.id===snap.id);if(i>=0)all[i]=snap;else all.unshift(snap);state.currentKpId=snap.id;setHistory(all);renderHistory();managerStatus(`КП для «${snap.header.clientName}» сохранено.`);if(andPdf)exportManagerKpToPdf(snap)}
-function renderHistory(){const list=root.querySelector('.fd-history-list');if(!list)return;const q=(document.getElementById('historySearch')?.value||'').trim().toLowerCase();const all=getHistory().filter(x=>!q||String(x.header?.clientName||'').toLowerCase().includes(q));if(!all.length){list.innerHTML='<div class="fd-history-empty">КП не найдены.</div>';return}list.innerHTML=all.map(x=>`<div class="fd-history-row"><span>${formatDateTime(x.createdAt)}</span><strong>${esc(x.header?.clientName||'Без клиента')}</strong><span>${esc(x.header?.manager||'—')}</span><span class="fd-history-sum">${money(x.totals?.grand||0)}</span><div class="fd-history-actions"><button class="fd-small-btn primary" data-open-kp="${esc(x.id)}">Открыть</button><button class="fd-small-btn" data-pdf-kp="${esc(x.id)}">PDF</button></div></div>`).join('')}
-function handleHistoryAction(e){const id=e.target.dataset.openKp||e.target.dataset.pdfKp;if(!id)return;const kp=getHistory().find(x=>x.id===id);if(!kp)return;if(e.target.dataset.pdfKp){exportManagerKpToPdf(kp);return}loadKp(kp)}
+async function saveManagerKp(andPdf){
+  if(state.product){managerStatus('Сначала добавьте редактируемое изделие в КП.');return}
+  if(!state.items.length){managerStatus('Добавьте хотя бы одно изделие.');return}
+  if(!managerHeader().clientName){managerStatus('Укажите клиента.');document.getElementById('clientName')?.focus();return}
+  const snap=kpSnapshot();
+  state.currentKpId=snap.id;
+  managerStatus(window.ManagerStorage.isShared()?'Сохраняем КП в общую историю…':'Сохраняем КП в этом браузере…');
+  try{
+    const saved=await window.ManagerStorage.save(snap);
+    if(saved?.createdAt)snap.createdAt=saved.createdAt;
+    await renderHistory();
+    managerStatus(`КП для «${snap.header.clientName}» сохранено${window.ManagerStorage.isShared()?' в общей истории':''}.`);
+    if(andPdf)exportManagerKpToPdf(saved||snap);
+  }catch(err){
+    console.error(err); managerStatus('Не удалось сохранить КП: '+(err?.message||err));
+  }
+}
+async function renderHistory(){
+  const list=root.querySelector('.fd-history-list');if(!list)return;
+  historySyncStatus(window.ManagerStorage.isShared()?'Общая история: синхронизируется между всеми менеджерами.':'Сейчас используется локальная история. Для общей истории подключите Apps Script Web App. ',window.ManagerStorage.isShared()?'shared':'local');
+  list.innerHTML='<div class="fd-history-empty">Загружаем историю…</div>';
+  try{
+    const q=(document.getElementById('historySearch')?.value||'').trim().toLowerCase();
+    const all=(await getHistory()).filter(x=>!q||String(x.clientName||x.header?.clientName||'').toLowerCase().includes(q));
+    if(!all.length){list.innerHTML='<div class="fd-history-empty">КП не найдены.</div>';return}
+    list.innerHTML=all.map(x=>`<div class="fd-history-row"><span>${formatDateTime(x.createdAt)}</span><strong>${esc(x.clientName||x.header?.clientName||'Без клиента')}</strong><span>${esc(x.manager||x.header?.manager||'—')}</span><span class="fd-history-sum">${money(x.grand||x.totals?.grand||0)}</span><div class="fd-history-actions"><button class="fd-small-btn primary" data-open-kp="${esc(x.id)}">Открыть</button><button class="fd-small-btn" data-pdf-kp="${esc(x.id)}">PDF</button></div></div>`).join('');
+  }catch(err){console.error(err);list.innerHTML='<div class="fd-history-empty">Не удалось загрузить историю: '+escapeHtml(err?.message||err)+'</div>'}
+}
+async function handleHistoryAction(e){
+  const id=e.target.dataset.openKp||e.target.dataset.pdfKp;if(!id)return;
+  try{
+    managerStatus('Загружаем КП…');
+    const kp=await window.ManagerStorage.get(id);if(!kp)throw new Error('КП не найдено');
+    if(e.target.dataset.pdfKp){managerStatus('КП загружено. Формируем PDF…');exportManagerKpToPdf(kp);return}
+    loadKp(kp);
+  }catch(err){console.error(err);managerStatus('Не удалось открыть КП: '+(err?.message||err))}
+}
 function loadKp(kp){state.currentKpId=kp.id;state.items=JSON.parse(JSON.stringify(kp.items||[]));resetCurrentConfiguration();const map={kpName:'kpName',manager:'managerName',managerPhone:'managerPhone',clientName:'clientName',projectName:'projectName',productionDays:'productionDays',discountPercent:'discountPercent',deliveryPrice:'deliveryPrice',prepaymentPercent:'prepaymentPercent',finalPaymentPercent:'finalPaymentPercent',offerValidDays:'offerValidDays',deliveryTerms:'deliveryTerms'};Object.entries(map).forEach(([k,id])=>{const e=document.getElementById(id);if(e)e.value=kp.header?.[k]??e.value});syncManagerPhone();const vat=document.getElementById('showVat');if(vat)vat.checked=!!kp.header?.showVat;renderCart();update();managerStatus(`Открыто КП для «${kp.header?.clientName||''}». Изменения сохранятся в эту запись.`);root.querySelector('.fd-main').scrollIntoView({behavior:'smooth'})}
 function newKp(){if(!confirm('Начать новое КП? Текущие несохранённые изменения будут очищены.'))return;state.currentKpId=null;state.items=[];resetCurrentConfiguration();['clientName','projectName'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});document.getElementById('discountPercent').value='0';document.getElementById('deliveryPrice').value='0';document.getElementById('showVat').checked=false;renderCart();update();managerStatus('Создано новое КП.')}
 function formatDateTime(s){try{return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(s))}catch{return s||''}}
