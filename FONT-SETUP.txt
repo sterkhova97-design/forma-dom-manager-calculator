@@ -1,9 +1,14 @@
-Century Gothic for Forma Dom manager
+CENTURY GOTHIC — ПОДКЛЮЧЕНИЕ
 
-Перед загрузкой проекта на GitHub положите в папку assets/fonts два ваших файла шрифта:
+Калькулятор и PDF работают даже без файлов шрифта: если Century Gothic отсутствует,
+используется системный fallback и PDF всё равно создаётся.
 
-1) Century_Gothic.ttf — Regular
-2) Century_Gothic_Bold.ttf — Bold
+Чтобы на GitHub Pages использовался именно Century Gothic, загрузите СВОИ файлы в:
 
-В проекте уже настроено использование этих файлов во всем интерфейсе и во всех страницах PDF КП.
-PDF-генератор ждёт загрузки Regular и Bold перед рендерингом страниц.
+assets/fonts/Century_Gothic.ttf
+assets/fonts/Century_Gothic_Bold.ttf
+
+Названия должны совпадать точно, включая регистр.
+После загрузки GitHub Pages автоматически начнёт использовать эти файлы.
+
+Важно: файлы шрифта в этот архив не включены.
