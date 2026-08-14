@@ -1,9 +1,0 @@
-Century Gothic for Forma Dom manager
-
-Перед загрузкой проекта на GitHub положите в папку assets/fonts два ваших файла шрифта:
-
-1) Century_Gothic.ttf — Regular
-2) Century_Gothic_Bold.ttf — Bold
-
-В проекте уже настроено использование этих файлов во всем интерфейсе и во всех страницах PDF КП.
-PDF-генератор ждёт загрузки Regular и Bold перед рендерингом страниц.
