@@ -1,5 +1,0 @@
-Скопируйте сюда файлы:
-CenturyGothic.ttf
-CenturyGothic-Bold.ttf
-CenturyGothic-Italic.ttf
-CenturyGothic-BoldItalic.ttf
