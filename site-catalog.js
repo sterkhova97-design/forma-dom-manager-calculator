@@ -122,6 +122,38 @@
       return {group,option};
     });
   }
+
+  function catalogProductType(product){
+    const cats=(product?.categories||[]).map(x=>String(x||'').toLowerCase());
+    const title=String(product?.title||'').toLowerCase();
+    const map=[
+      ['кресл','Кресло'],['диван','Диван'],['кроват','Кровать'],['банкет','Банкетка'],['пуф','Пуф'],
+      ['стул','Стул'],['стол','Стол'],['тумб','Тумба'],['комод','Комод'],['консол','Консоль'],['зеркал','Зеркало']
+    ];
+    for(const [needle,label] of map){
+      if(cats.some(c=>c.includes(needle)) || title.includes(needle)) return label;
+    }
+    return (product?.categories?.[0]||'Изделие').replace(/ы$/,'').replace(/и$/,'');
+  }
+
+  function cleanCatalogKpRows(rows){
+    return (rows||[]).map(r=>({label:String(r?.label||'').trim(),value:String(r?.value||'').trim()})).filter(r=>{
+      const l=r.label.toLowerCase();
+      const v=r.value.toLowerCase();
+      if(!r.value) return false;
+      if(l==='коллекция') return false;
+      if(v.includes('подобрать ткань')) return false;
+      if((l.includes('ящик') || l.includes('ящики')) && /^без(?:\s|$)/i.test(r.value)) return false;
+      return true;
+    }).map(r=>{
+      const l=r.label.toLowerCase();
+      if(l.includes('механизм')){
+        r.value=r.value.replace(/\s*[+—-]?\s*\d[\d\s]*(?:руб\.?|₽|р\.?)\s*$/i,'').trim();
+      }
+      return r;
+    });
+  }
+
   function selectedCatalogVariant(){
     const id=document.getElementById('fdCatalogVariant')?.value||'';
     return (currentCatalogProduct?.variants||[]).find(v=>String(v.id)===String(id))||null;
@@ -206,12 +238,14 @@
     });
     if(markup>0) rows.push({label:'Индивидуальный размер',value:`Да (+${markup}%)`});
     if(currentCatalogProduct.material) rows.push({label:'Материал',value:currentCatalogProduct.material});
-    if(currentCatalogProduct.collection) rows.push({label:'Коллекция',value:currentCatalogProduct.collection});
+    const kpRows=cleanCatalogKpRows(rows);
+    const productType=catalogProductType(currentCatalogProduct);
+    const displayName=(String(currentCatalogProduct.title||'').toLowerCase().startsWith(productType.toLowerCase()+' ')) ? currentCatalogProduct.title : `${productType} ${currentCatalogProduct.title}`;
     const item={
       uid:editingCatalogUid||`catalog_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
-      sourceType:'site_catalog', productId:`site_${currentCatalogProduct.id}`, productName:currentCatalogProduct.title,
+      sourceType:'site_catalog', productId:`site_${currentCatalogProduct.id}`, productName:displayName, productType,
       catalogProductId:currentCatalogProduct.id,catalogVariantId:v?.id||'',catalogVariantLabel:v?variantLabel(v):'',
-      catalogBasePrice:base,catalogModSelections,catalogModifiersTotal:modsTotal,catalogMarkupPercent:markup,price,quantity:1,dimensionsText:dims,catalogRows:rows,
+      catalogBasePrice:base,catalogModSelections,catalogModifiersTotal:modsTotal,catalogMarkupPercent:markup,price,quantity:1,dimensionsText:dims,catalogRows:kpRows,
       image:{dataUrl:imageData,sourceUrl:imageUrl,name:currentCatalogProduct.title}
     };
     if(editingCatalogUid){const i=state.items.findIndex(x=>x.uid===editingCatalogUid);if(i>=0){item.quantity=state.items[i].quantity||1;state.items[i]=item;}}
@@ -230,9 +264,12 @@
     const vm=originalBuildPdfVm(kp);
     (kp.items||[]).forEach((src,i)=>{
       if(src.sourceType!=='site_catalog'||!vm.items[i])return;
-      vm.items[i].productName=src.productName;
+      const prod=(SITE_CATALOG||[]).find(p=>String(p.id)===String(src.catalogProductId));
+      const type=src.productType||catalogProductType(prod);
+      const rawName=String(src.productName||prod?.title||'').trim();
+      vm.items[i].productName=(type && !rawName.toLowerCase().startsWith(type.toLowerCase()+' '))?`${type} ${rawName}`:rawName;
       vm.items[i].dimensionsText=src.dimensionsText||'';
-      vm.items[i].rows=src.catalogRows||[];
+      vm.items[i].rows=cleanCatalogKpRows(src.catalogRows||[]);
       vm.items[i].image=src.image?.dataUrl||src.image?.sourceUrl||'';
       vm.items[i].price=Number(src.price||0);
       vm.items[i].quantity=Number(src.quantity||1);

@@ -2,7 +2,7 @@
 @font-face{
   font-family:"Century Gothic";
   src:local("Century Gothic"),
-      url("./assets/fonts/Century_Gothic.ttf") format("truetype");
+      url("./assets/fonts/Century%20Gothic.ttf") format("truetype");
   font-style:normal;
   font-weight:400;
   font-display:swap;
@@ -10,7 +10,7 @@
 @font-face{
   font-family:"Century Gothic";
   src:local("Century Gothic Bold"),
-      url("./assets/fonts/Century_Gothic_Bold.ttf") format("truetype");
+      url("./assets/fonts/Century%20Gothic%20Bold.ttf") format("truetype");
   font-style:normal;
   font-weight:700;
   font-display:swap;

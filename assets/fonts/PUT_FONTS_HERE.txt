@@ -1,5 +1,4 @@
-Скопируйте сюда файлы:
-CenturyGothic.ttf
-CenturyGothic-Bold.ttf
-CenturyGothic-Italic.ttf
-CenturyGothic-BoldItalic.ttf
+Century Gothic files are not included in this archive.
+For your GitHub repository, keep your licensed font files here with these exact names:
+Century Gothic.ttf
+Century Gothic Bold.ttf

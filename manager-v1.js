@@ -1049,8 +1049,8 @@ function renderPdfPages(kp){
   return html;
 }
 async function getOptionalCenturyGothicCss(){
-  const regularUrl=new URL('./assets/fonts/Century_Gothic.ttf',location.href).href;
-  const boldUrl=new URL('./assets/fonts/Century_Gothic_Bold.ttf',location.href).href;
+  const regularUrl=new URL('./assets/fonts/Century Gothic.ttf',location.href).href;
+  const boldUrl=new URL('./assets/fonts/Century Gothic Bold.ttf',location.href).href;
   try{
     const [regular,bold]=await Promise.all([
       fetch(regularUrl,{method:'HEAD',cache:'no-store'}),
@@ -1182,4 +1182,5 @@ async function exportManagerKpToPdf(kp){
 // Initialize manager edition after all constants/functions are ready.
 loadOptionalCenturyGothicForPage().catch(()=>{});
 boot();
+loadOptionalCenturyGothicForPage().catch(()=>{});
 setTimeout(()=>{renderHistory();updateManagerTotal()},0);

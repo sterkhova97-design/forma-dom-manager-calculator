@@ -1,14 +1,8 @@
-CENTURY GOTHIC — ПОДКЛЮЧЕНИЕ
+CENTURY GOTHIC
 
-Калькулятор и PDF работают даже без файлов шрифта: если Century Gothic отсутствует,
-используется системный fallback и PDF всё равно создаётся.
+The project expects your own licensed font files in:
+assets/fonts/Century Gothic.ttf
+assets/fonts/Century Gothic Bold.ttf
 
-Чтобы на GitHub Pages использовался именно Century Gothic, загрузите СВОИ файлы в:
-
-assets/fonts/Century_Gothic.ttf
-assets/fonts/Century_Gothic_Bold.ttf
-
-Названия должны совпадать точно, включая регистр.
-После загрузки GitHub Pages автоматически начнёт использовать эти файлы.
-
-Важно: файлы шрифта в этот архив не включены.
+The filenames intentionally contain spaces and now match the files shown in your GitHub repository.
+Both the calculator page and generated PDF use these same files.

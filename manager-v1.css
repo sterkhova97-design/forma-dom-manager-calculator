@@ -1,3 +1,18 @@
+@font-face{
+  font-family:"Century Gothic";
+  src:url("./assets/fonts/Century%20Gothic.ttf") format("truetype");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Century Gothic";
+  src:url("./assets/fonts/Century%20Gothic%20Bold.ttf") format("truetype");
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+}
+
 
 :root{
   --fd-bg:#FCF7ED;
