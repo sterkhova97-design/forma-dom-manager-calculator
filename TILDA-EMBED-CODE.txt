@@ -1,0 +1,290 @@
+<div class="forma-calculator-frame">
+  <iframe
+    id="forma-dom-calculator"
+    src="https://forma-dom-calculator.sterkhova97.workers.dev"
+    title="Калькулятор мебели Forma Dom"
+    loading="eager"
+    scrolling="no"
+  ></iframe>
+</div>
+
+<style>
+  .forma-calculator-frame {
+    width: 100%;
+    overflow: hidden;
+    background: #fcf7ed;
+  }
+
+  #forma-dom-calculator {
+    display: block;
+    width: 100%;
+    height: 1000px;
+    border: 0;
+    background: #fcf7ed;
+    transition: height .15s ease;
+  }
+
+  #rec2741983301 {
+    position: absolute !important;
+    left: -10000px !important;
+    top: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+</style>
+
+<script>
+(function () {
+  var frame = document.getElementById('forma-dom-calculator');
+  var pending = null;
+  var timeoutId = null;
+  var successBoundForm = null;
+
+  if (!frame) return;
+
+  function sendToCalculator(type, requestId, message) {
+    if (!frame.contentWindow) return;
+
+    frame.contentWindow.postMessage({
+      type: type,
+      requestId: requestId,
+      message: message || ''
+    }, '*');
+  }
+
+  function normalizePhone(value) {
+    var digits = String(value || '').replace(/\D/g, '');
+
+    if (digits.length === 11 && digits.charAt(0) === '8') {
+      digits = '7' + digits.slice(1);
+    }
+
+    if (digits.length === 10) {
+      digits = '7' + digits;
+    }
+
+    return digits ? '+' + digits : '';
+  }
+
+  function findTildaForm() {
+    var block = document.getElementById('rec2741983301');
+
+    if (block) {
+      var formInBlock = block.querySelector('form.js-form-proccess, form');
+      if (formInBlock) return formInBlock;
+    }
+
+    var marker = document.querySelector(
+      'input[name="CalculatorSource"]'
+    );
+
+    if (marker && marker.form) return marker.form;
+
+    return null;
+  }
+
+  function setField(form, name, value) {
+    var field = form.querySelector('[name="' + name + '"]');
+    if (!field) return false;
+
+    field.value = value == null ? '' : String(value);
+
+    ['input', 'change', 'blur'].forEach(function (eventName) {
+      field.dispatchEvent(new Event(eventName, { bubbles: true }));
+    });
+
+    return true;
+  }
+
+  function getVisibleError(form) {
+    var selectors = [
+      '.js-errorbox-all',
+      '.t-form__errorbox-wrapper',
+      '.t-form__errorbox-middle',
+      '.t-input-error'
+    ];
+
+    for (var i = 0; i < selectors.length; i++) {
+      var nodes = form.querySelectorAll(selectors[i]);
+
+      for (var j = 0; j < nodes.length; j++) {
+        var node = nodes[j];
+        var style = window.getComputedStyle(node);
+        var text = (node.textContent || '').trim();
+
+        if (
+          text &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden'
+        ) {
+          return text;
+        }
+      }
+    }
+
+    var invalid = form.querySelector(':invalid');
+    if (invalid) {
+      return 'Tilda не приняла поле «' +
+        (invalid.getAttribute('name') || 'без названия') +
+        '».';
+    }
+
+    return '';
+  }
+
+  function completeSuccess() {
+    if (!pending) return;
+
+    clearTimeout(timeoutId);
+    var requestId = pending.requestId;
+    pending = null;
+
+    sendToCalculator(
+      'forma-dom-calculator-lead-success',
+      requestId
+    );
+  }
+
+  function bindSuccess(form) {
+    if (successBoundForm === form) return;
+    successBoundForm = form;
+
+    form.addEventListener('tildaform:aftersuccess', completeSuccess);
+
+    if (window.jQuery) {
+      window.jQuery(form).off(
+        'tildaform:aftersuccess.formaDom'
+      ).on(
+        'tildaform:aftersuccess.formaDom',
+        completeSuccess
+      );
+    }
+
+    var observer = new MutationObserver(function () {
+      if (!pending) return;
+
+      var successBox = form.querySelector(
+        '.js-successbox, .t-form__successbox'
+      );
+
+      if (!successBox) return;
+
+      var style = window.getComputedStyle(successBox);
+      if (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden'
+      ) {
+        completeSuccess();
+      }
+    });
+
+    observer.observe(form, {
+      subtree: true,
+      attributes: true,
+      childList: true
+    });
+  }
+
+  function submitToTilda(payload) {
+    var form = findTildaForm();
+
+    if (!form) {
+      sendToCalculator(
+        'forma-dom-calculator-lead-error',
+        payload.requestId,
+        'Служебная форма Tilda не найдена.'
+      );
+      return;
+    }
+
+    bindSuccess(form);
+
+    setField(form, 'Name', payload.name);
+    setField(form, 'Phone', normalizePhone(payload.phone));
+    setField(form, 'ContactMethod', payload.contactMethod);
+    setField(form, 'Comment', payload.comment);
+    setField(form, 'Configuration', payload.configuration);
+    setField(form, 'Total', payload.totalPrice);
+    setField(form, 'Source', payload.source);
+    setField(form, 'PageUrl', window.location.href);
+    setField(form, 'CalculatorSource', 'FormaDomCalculator');
+
+    pending = payload;
+
+    var submitButton = form.querySelector(
+      'button[type="submit"], input[type="submit"], .t-submit'
+    );
+
+    if (!submitButton) {
+      pending = null;
+      sendToCalculator(
+        'forma-dom-calculator-lead-error',
+        payload.requestId,
+        'Кнопка формы Tilda не найдена.'
+      );
+      return;
+    }
+
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit(submitButton);
+    } else {
+      submitButton.click();
+    }
+
+    window.setTimeout(function () {
+      if (!pending || pending.requestId !== payload.requestId) return;
+
+      var error = getVisibleError(form);
+      if (!error) return;
+
+      pending = null;
+      clearTimeout(timeoutId);
+
+      sendToCalculator(
+        'forma-dom-calculator-lead-error',
+        payload.requestId,
+        error
+      );
+    }, 900);
+
+    clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(function () {
+      if (!pending || pending.requestId !== payload.requestId) return;
+
+      var error = getVisibleError(form);
+      pending = null;
+
+      sendToCalculator(
+        'forma-dom-calculator-lead-error',
+        payload.requestId,
+        error || 'Tilda не подтвердила отправку формы.'
+      );
+    }, 20000);
+  }
+
+  window.addEventListener('message', function (event) {
+    var data = event.data || {};
+
+    if (
+      data.type === 'forma-dom-calculator-height' &&
+      Number.isFinite(Number(data.height))
+    ) {
+      frame.style.height = Math.max(600, Number(data.height)) + 'px';
+      return;
+    }
+
+    if (
+      data.type === 'forma-dom-calculator-lead' &&
+      data.payload &&
+      data.payload.requestId
+    ) {
+      submitToTilda(data.payload);
+    }
+  });
+})();
+</script>
