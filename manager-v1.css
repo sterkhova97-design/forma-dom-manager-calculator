@@ -831,8 +831,8 @@ body{
 @media(max-width:760px){.fd-manager-grid{grid-template-columns:1fr}.fd-manager-field.wide,.fd-manager-field.full{grid-column:1}.fd-history-head{align-items:stretch;flex-direction:column}.fd-history-row{grid-template-columns:1fr}.fd-history-actions{justify-content:flex-start}.fd-manager-actions button{width:100%!important}}
 
 /* ===== Каталог Forma Dom с сайта ===== */
-.fd-source-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px}
-.fd-source-tab{border:1px solid #d8d0c8;background:#fff;color:#46281E;border-radius:999px;padding:10px 12px;cursor:pointer;font-family:inherit}
+.fd-source-tabs{display:grid;grid-template-columns:1fr;gap:8px;margin:0 0 14px;width:100%}
+.fd-source-tab{width:100%;min-height:44px;box-sizing:border-box;border:1px solid #d8d0c8;background:#fff;color:#46281E;border-radius:14px;padding:8px 10px;cursor:pointer;font-family:inherit;font-size:13px;line-height:1.15;text-align:center}
 .fd-source-tab.active{background:#46281E;color:#fff;border-color:#46281E}
 .fd-catalog-toolbar{display:grid;gap:8px;margin-bottom:12px}.fd-catalog-toolbar input,.fd-catalog-toolbar select{width:100%;box-sizing:border-box;border:1px solid #ddd3ca;border-radius:12px;padding:10px 12px;background:#fff;font:inherit}
 .fd-catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:640px;overflow:auto;padding-right:2px}

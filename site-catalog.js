@@ -90,6 +90,38 @@
     if(v.editions) return v.editions.split(';').map(x=>x.replace(':',' — ')).join(' · ');
     return v.title||'Вариант';
   }
+
+  function parseSiteModifications(raw){
+    if(!raw) return [];
+    return String(raw).split('|').map((group,groupIndex)=>{
+      const parts=group.split(':');
+      const label=(parts.shift()||'').trim();
+      const options=parts.join(':').split(';').map((item,optionIndex)=>{
+        const text=String(item||'').trim();
+        if(!text) return null;
+        const m=text.match(/^(.*?)(?:=\s*\+?(-?[\d\s.,]+))?$/);
+        const optionLabel=(m?.[1]||text).trim();
+        const priceDelta=m?.[2] ? Number(String(m[2]).replace(/\s/g,'').replace(',','.'))||0 : 0;
+        return {id:`m${groupIndex}_${optionIndex}`,label:optionLabel,priceDelta};
+      }).filter(Boolean);
+      return label&&options.length ? {id:`mod_${groupIndex}`,label,options} : null;
+    }).filter(Boolean);
+  }
+
+  function currentModifierSelections(){
+    const out={};
+    document.querySelectorAll('#fdCatalogModal [data-catalog-mod]').forEach(sel=>{out[sel.dataset.catalogMod]=sel.value;});
+    return out;
+  }
+
+  function selectedModifierData(){
+    const groups=parseSiteModifications(currentCatalogProduct?.modifications);
+    const selections=currentModifierSelections();
+    return groups.map(group=>{
+      const option=group.options.find(o=>String(o.id)===String(selections[group.id]))||group.options[0];
+      return {group,option};
+    });
+  }
   function selectedCatalogVariant(){
     const id=document.getElementById('fdCatalogVariant')?.value||'';
     return (currentCatalogProduct?.variants||[]).find(v=>String(v.id)===String(id))||null;
@@ -111,6 +143,8 @@
     const base=item?.catalogBasePrice ?? variant?.price ?? product.basePrice ?? 0;
     const markup=item?.catalogMarkupPercent ?? 0;
     const dims=item?.dimensionsText || inferDims(product,variant);
+    const modificationGroups=parseSiteModifications(product.modifications);
+    const savedMods=item?.catalogModSelections||{};
     const body=document.querySelector('#fdCatalogModal .fd-catalog-dialog-body');
     body.innerHTML=`
       <div class="fd-catalog-config-head">
@@ -119,6 +153,7 @@
       </div>
       <div class="fd-catalog-config-grid">
         ${variants.length?`<label>Конфигурация с сайта<select id="fdCatalogVariant">${variants.map(v=>`<option value="${escCat(v.id)}" ${String(v.id)===String(currentVariantId)?'selected':''}>${escCat(variantLabel(v))} — ${moneyFmt(v.price)}</option>`).join('')}</select></label>`:''}
+        ${modificationGroups.map(group=>`<label>${escCat(group.label)}<select data-catalog-mod="${escCat(group.id)}">${group.options.map((option,index)=>`<option value="${escCat(option.id)}" ${String(savedMods[group.id]??group.options[0]?.id)===String(option.id)?'selected':''}>${escCat(option.label)}${option.priceDelta?` (+${moneyFmt(option.priceDelta)})`:''}</option>`).join('')}</select></label>`).join('')}
         <label>Базовая цена, ₽<input id="fdCatalogBasePrice" type="number" min="0" step="100" value="${Number(base||0)}"></label>
         <label>Индивидуальный размер<select id="fdCatalogMarkup"><option value="0" ${markup==0?'selected':''}>Нет</option><option value="15" ${markup==15?'selected':''}>+15%</option><option value="20" ${markup==20?'selected':''}>+20%</option><option value="25" ${markup==25?'selected':''}>+25%</option></select></label>
         <label>Габариты для КП<input id="fdCatalogDims" value="${escCat(dims)}" placeholder="например 2500x1000x750 мм"></label>
@@ -139,8 +174,9 @@
   }
   function updateCatalogFinalPrice(){
     const base=Number(document.getElementById('fdCatalogBasePrice')?.value||0);
+    const modsTotal=selectedModifierData().reduce((sum,x)=>sum+Number(x.option?.priceDelta||0),0);
     const markup=Number(document.getElementById('fdCatalogMarkup')?.value||0);
-    const final=Math.round(base*(1+markup/100));
+    const final=Math.round((base+modsTotal)*(1+markup/100));
     const out=document.getElementById('fdCatalogFinalPrice'); if(out)out.textContent=moneyFmt(final);
   }
 
@@ -155,13 +191,19 @@
   async function addCatalogItem(){
     const v=selectedCatalogVariant();
     const base=Number(document.getElementById('fdCatalogBasePrice')?.value||0);
+    const modifierData=selectedModifierData();
+    const catalogModSelections=currentModifierSelections();
+    const modsTotal=modifierData.reduce((sum,x)=>sum+Number(x.option?.priceDelta||0),0);
     const markup=Number(document.getElementById('fdCatalogMarkup')?.value||0);
-    const price=Math.round(base*(1+markup/100));
+    const price=Math.round((base+modsTotal)*(1+markup/100));
     const dims=(document.getElementById('fdCatalogDims')?.value||'').trim();
     const imageUrl=currentCatalogProduct.photo||'';
     const imageData=await imageToDataUrl(imageUrl);
     const rows=[];
     if(v?.editions) v.editions.split(';').filter(Boolean).forEach(part=>{const [k,...rest]=part.split(':');rows.push({label:k||'Конфигурация',value:rest.join(':')||part});});
+    modifierData.forEach(({group,option})=>{
+      if(option?.label) rows.push({label:group.label,value:option.label});
+    });
     if(markup>0) rows.push({label:'Индивидуальный размер',value:`Да (+${markup}%)`});
     if(currentCatalogProduct.material) rows.push({label:'Материал',value:currentCatalogProduct.material});
     if(currentCatalogProduct.collection) rows.push({label:'Коллекция',value:currentCatalogProduct.collection});
@@ -169,7 +211,7 @@
       uid:editingCatalogUid||`catalog_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
       sourceType:'site_catalog', productId:`site_${currentCatalogProduct.id}`, productName:currentCatalogProduct.title,
       catalogProductId:currentCatalogProduct.id,catalogVariantId:v?.id||'',catalogVariantLabel:v?variantLabel(v):'',
-      catalogBasePrice:base,catalogMarkupPercent:markup,price,quantity:1,dimensionsText:dims,catalogRows:rows,
+      catalogBasePrice:base,catalogModSelections,catalogModifiersTotal:modsTotal,catalogMarkupPercent:markup,price,quantity:1,dimensionsText:dims,catalogRows:rows,
       image:{dataUrl:imageData,sourceUrl:imageUrl,name:currentCatalogProduct.title}
     };
     if(editingCatalogUid){const i=state.items.findIndex(x=>x.uid===editingCatalogUid);if(i>=0){item.quantity=state.items[i].quantity||1;state.items[i]=item;}}

@@ -1,0 +1,12 @@
+FORMA DOM Manager v2.0 — PDF corrections
+
+- Discount is calculated only from product subtotal, never from delivery.
+- Final payable with discount includes delivery; when VAT is enabled, VAT is applied to discounted product subtotal, then delivery is added.
+- Item card: Price / Quantity / Sum / VAT are aligned in one two-column grid; labels left, values right.
+- Removed dash between "С НДС 22%" and amount.
+- Delivery terms: when delivery amount is specified, no duplicate delivery sentence is printed in conditions; when empty, fixed "считается по факту" text is printed.
+- Final page salon text changed to "СКОРО ОТКРЫТИЕ".
+- Summary table body text is vertically centered between separator lines.
+- Totals and conditions are fixed to independent page zones so VAT row cannot push conditions.
+- Two unnecessary blank separator rows before totals removed where space permits.
+- PDF and form use Century Gothic when Century_Gothic.ttf and Century_Gothic_Bold.ttf are present in assets/fonts (or installed locally).
