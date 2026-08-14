@@ -1048,3 +1048,20 @@ body{
     min-height:44px !important;font-size:13px !important;border-radius:14px !important;padding:10px 12px !important;
   }
 }
+
+/* ===== v2.5 — price edit, clean catalog selectors, hover ===== */
+#fd-calculator-root button:hover,
+.fd-catalog-modal button:hover,
+.fd-price-editor button:hover,
+.fd-price-import-label:hover{
+  background:#46281E !important;
+  color:#fff !important;
+  border-color:#46281E !important;
+}
+.fd-current-price-row{gap:10px;align-items:center;flex-wrap:wrap}
+.fd-current-price-row .fd-edit-current-price{width:auto!important;margin-left:auto!important}
+.fd-catalog-edit-price{width:100%;margin:0 0 10px}
+.fd-catalog-config-grid label{min-width:0}
+@media(max-width:760px){
+  .fd-current-price-row .fd-edit-current-price{width:100%!important;margin-left:0!important}
+}

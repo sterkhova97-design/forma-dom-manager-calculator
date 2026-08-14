@@ -4,6 +4,7 @@
   let catalogMode='custom';
   let currentCatalogProduct=null;
   let editingCatalogUid=null;
+  let manualCatalogPrice=null;
 
   function initCatalog(){
     const productsCard=root?.querySelector('.fd-products-card');
@@ -48,9 +49,22 @@
     if(mode==='site') renderSiteCatalog();
   }
 
+
+  const HIDDEN_CATALOG_CATEGORIES = new Set([
+    'Диван-кровать',
+    'Модульные диваны',
+    'Новинки',
+    'SALE',
+    'Угловые диваны'
+  ]);
+
+  function visibleCatalogCategories(categories){
+    return (categories||[]).filter(c=>!HIDDEN_CATALOG_CATEGORIES.has(String(c||'').trim()));
+  }
+
   function buildCategoryOptions(){
     const sel=root.querySelector('#fdCatalogCategory');
-    const cats=[...new Set((SITE_CATALOG||[]).flatMap(p=>p.categories||[]))].sort((a,b)=>a.localeCompare(b,'ru'));
+    const cats=[...new Set((SITE_CATALOG||[]).flatMap(p=>visibleCatalogCategories(p.categories)))].sort((a,b)=>a.localeCompare(b,'ru'));
     sel.insertAdjacentHTML('beforeend',cats.map(c=>`<option value="${escCat(c)}">${escCat(c)}</option>`).join(''));
   }
 
@@ -65,7 +79,7 @@
       return `<button type="button" class="fd-catalog-card" data-catalog-id="${escCat(p.id)}">
         <span class="fd-catalog-photo">${p.photo?`<img src="${escCat(p.photo)}" loading="lazy" referrerpolicy="no-referrer" alt="${escCat(p.title)}">`:''}</span>
         <span class="fd-catalog-title">${escCat(p.title)}</span>
-        <span class="fd-catalog-meta">${escCat((p.categories||[]).slice(0,2).join(' · '))}</span>
+        <span class="fd-catalog-meta">${escCat(visibleCatalogCategories(p.categories).slice(0,2).join(' · '))}</span>
         <span class="fd-catalog-price">${min?`от ${moneyFmt(min)}`:'Цена по запросу'}</span>
       </button>`;
     }).join('') || '<div class="fd-empty">Ничего не найдено.</div>';
@@ -83,12 +97,30 @@
     modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('.fd-catalog-close')) closeCatalogModal();});
     modal.addEventListener('change',handleCatalogConfigChange);
     modal.addEventListener('input',handleCatalogConfigChange);
-    modal.addEventListener('click',e=>{const b=e.target.closest('.fd-catalog-add');if(b)addCatalogItem();});
+    modal.addEventListener('click',e=>{const edit=e.target.closest('.fd-catalog-edit-price');if(edit){editCatalogFinalPrice();return;} const b=e.target.closest('.fd-catalog-add');if(b)addCatalogItem();});
   }
 
   function variantLabel(v){
     if(v.editions) return v.editions.split(';').map(x=>x.replace(':',' — ')).join(' · ');
     return v.title||'Вариант';
+  }
+
+  function editionMap(v){
+    const out={};
+    String(v?.editions||'').split(';').forEach(part=>{
+      const [k,...rest]=part.split(':');
+      if(k&&rest.length) out[String(k).trim()]=rest.join(':').trim();
+    });
+    return out;
+  }
+  function fabricLabel(v){
+    const e=editionMap(v);
+    return e['Ткань'] || e['Тип ткани'] || v?.title?.replace(/^.*?\s[-—]\s*/,'') || 'Вариант';
+  }
+  function catalogGroupLabel(label){
+    const l=String(label||'').trim();
+    if(/размер\s+спального\s+места/i.test(l)) return 'Размер';
+    return l;
   }
 
   function parseSiteModifications(raw){
@@ -115,7 +147,7 @@
   }
 
   function selectedModifierData(){
-    const groups=parseSiteModifications(currentCatalogProduct?.modifications);
+    const groups=parseSiteModifications(currentCatalogProduct?.modifications).filter(group=>!/материалы\s+по\s+индивидуальному\s+расчету/i.test(String(group.label||'')));
     const selections=currentModifierSelections();
     return groups.map(group=>{
       const option=group.options.find(o=>String(o.id)===String(selections[group.id]))||group.options[0];
@@ -175,22 +207,24 @@
     const base=item?.catalogBasePrice ?? variant?.price ?? product.basePrice ?? 0;
     const markup=item?.catalogMarkupPercent ?? 0;
     const dims=item?.dimensionsText || inferDims(product,variant);
-    const modificationGroups=parseSiteModifications(product.modifications);
+    const modificationGroups=parseSiteModifications(product.modifications).filter(group=>!/материалы\s+по\s+индивидуальному\s+расчету/i.test(String(group.label||'')));
     const savedMods=item?.catalogModSelections||{};
+    manualCatalogPrice=item?.catalogManualPrice ? Number(item.price||0) : null;
     const body=document.querySelector('#fdCatalogModal .fd-catalog-dialog-body');
     body.innerHTML=`
       <div class="fd-catalog-config-head">
         <div class="fd-catalog-config-photo">${product.photo?`<img src="${escCat(product.photo)}" referrerpolicy="no-referrer" alt="${escCat(product.title)}">`:''}</div>
-        <div><h2>${escCat(product.title)}</h2><div class="fd-catalog-meta">${escCat((product.categories||[]).join(' · '))}</div></div>
+        <div><h2>${escCat(product.title)}</h2><div class="fd-catalog-meta">${escCat(visibleCatalogCategories(product.categories).join(' · '))}</div></div>
       </div>
       <div class="fd-catalog-config-grid">
-        ${variants.length?`<label>Конфигурация с сайта<select id="fdCatalogVariant">${variants.map(v=>`<option value="${escCat(v.id)}" ${String(v.id)===String(currentVariantId)?'selected':''}>${escCat(variantLabel(v))} — ${moneyFmt(v.price)}</option>`).join('')}</select></label>`:''}
-        ${modificationGroups.map(group=>`<label>${escCat(group.label)}<select data-catalog-mod="${escCat(group.id)}">${group.options.map((option,index)=>`<option value="${escCat(option.id)}" ${String(savedMods[group.id]??group.options[0]?.id)===String(option.id)?'selected':''}>${escCat(option.label)}${option.priceDelta?` (+${moneyFmt(option.priceDelta)})`:''}</option>`).join('')}</select></label>`).join('')}
-        <label>Базовая цена, ₽<input id="fdCatalogBasePrice" type="number" min="0" step="100" value="${Number(base||0)}"></label>
+        ${variants.length?`<label>Ткань<select id="fdCatalogVariant">${variants.map(v=>`<option value="${escCat(v.id)}" ${String(v.id)===String(currentVariantId)?'selected':''}>${escCat(fabricLabel(v))}</option>`).join('')}</select></label>`:''}
+        ${modificationGroups.map(group=>`<label>${escCat(catalogGroupLabel(group.label))}<select data-catalog-mod="${escCat(group.id)}">${group.options.map((option,index)=>`<option value="${escCat(option.id)}" ${String(savedMods[group.id]??group.options[0]?.id)===String(option.id)?'selected':''}>${escCat(option.label)}</option>`).join('')}</select></label>`).join('')}
+        <input id="fdCatalogBasePrice" type="hidden" value="${Number(base||0)}">
         <label>Индивидуальный размер<select id="fdCatalogMarkup"><option value="0" ${markup==0?'selected':''}>Нет</option><option value="15" ${markup==15?'selected':''}>+15%</option><option value="20" ${markup==20?'selected':''}>+20%</option><option value="25" ${markup==25?'selected':''}>+25%</option></select></label>
         <label>Габариты для КП<input id="fdCatalogDims" value="${escCat(dims)}" placeholder="например 2500x1000x750 мм"></label>
       </div>
       <div class="fd-catalog-calc"><span>Цена позиции</span><strong id="fdCatalogFinalPrice">—</strong></div>
+      <button type="button" class="fd-secondary fd-catalog-edit-price">Редактировать цену</button>
       <button type="button" class="fd-primary fd-catalog-add">${item?'Сохранить изменения':'Добавить в КП'}</button>`;
     document.getElementById('fdCatalogModal').hidden=false;
     updateCatalogFinalPrice();
@@ -198,18 +232,31 @@
 
   function closeCatalogModal(){document.getElementById('fdCatalogModal').hidden=true; currentCatalogProduct=null; editingCatalogUid=null;}
   function handleCatalogConfigChange(e){
+    if(e.target.matches('#fdCatalogVariant,#fdCatalogMarkup,[data-catalog-mod],#fdCatalogBasePrice')) manualCatalogPrice=null;
     if(e.target.id==='fdCatalogVariant'){
       const v=selectedCatalogVariant();
       if(v){document.getElementById('fdCatalogBasePrice').value=Number(v.price||0); document.getElementById('fdCatalogDims').value=inferDims(currentCatalogProduct,v);}
     }
     updateCatalogFinalPrice();
   }
-  function updateCatalogFinalPrice(){
+  function calculatedCatalogPrice(){
     const base=Number(document.getElementById('fdCatalogBasePrice')?.value||0);
     const modsTotal=selectedModifierData().reduce((sum,x)=>sum+Number(x.option?.priceDelta||0),0);
     const markup=Number(document.getElementById('fdCatalogMarkup')?.value||0);
-    const final=Math.round((base+modsTotal)*(1+markup/100));
+    return Math.round((base+modsTotal)*(1+markup/100));
+  }
+  function updateCatalogFinalPrice(){
+    const final=manualCatalogPrice!=null ? Number(manualCatalogPrice) : calculatedCatalogPrice();
     const out=document.getElementById('fdCatalogFinalPrice'); if(out)out.textContent=moneyFmt(final);
+  }
+  function editCatalogFinalPrice(){
+    const current=manualCatalogPrice!=null ? Number(manualCatalogPrice) : calculatedCatalogPrice();
+    const raw=window.prompt('Цена позиции для КП, ₽',String(Math.round(current)));
+    if(raw===null)return;
+    const value=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+    if(!Number.isFinite(value)||value<0)return;
+    manualCatalogPrice=Math.round(value);
+    updateCatalogFinalPrice();
   }
 
   async function imageToDataUrl(url){
@@ -227,7 +274,8 @@
     const catalogModSelections=currentModifierSelections();
     const modsTotal=modifierData.reduce((sum,x)=>sum+Number(x.option?.priceDelta||0),0);
     const markup=Number(document.getElementById('fdCatalogMarkup')?.value||0);
-    const price=Math.round((base+modsTotal)*(1+markup/100));
+    const calculatedPrice=Math.round((base+modsTotal)*(1+markup/100));
+    const price=manualCatalogPrice!=null?Math.round(Number(manualCatalogPrice)):calculatedPrice;
     const dims=(document.getElementById('fdCatalogDims')?.value||'').trim();
     const imageUrl=currentCatalogProduct.photo||'';
     const imageData=await imageToDataUrl(imageUrl);
@@ -245,7 +293,7 @@
       uid:editingCatalogUid||`catalog_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
       sourceType:'site_catalog', productId:`site_${currentCatalogProduct.id}`, productName:displayName, productType,
       catalogProductId:currentCatalogProduct.id,catalogVariantId:v?.id||'',catalogVariantLabel:v?variantLabel(v):'',
-      catalogBasePrice:base,catalogModSelections,catalogModifiersTotal:modsTotal,catalogMarkupPercent:markup,price,quantity:1,dimensionsText:dims,catalogRows:kpRows,
+      catalogBasePrice:base,catalogModSelections,catalogModifiersTotal:modsTotal,catalogMarkupPercent:markup,catalogManualPrice:manualCatalogPrice!=null,calculatedPrice,price,quantity:1,dimensionsText:dims,catalogRows:kpRows,
       image:{dataUrl:imageData,sourceUrl:imageUrl,name:currentCatalogProduct.title}
     };
     if(editingCatalogUid){const i=state.items.findIndex(x=>x.uid===editingCatalogUid);if(i>=0){item.quantity=state.items[i].quantity||1;state.items[i]=item;}}

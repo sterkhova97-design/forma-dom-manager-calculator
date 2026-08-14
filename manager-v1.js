@@ -909,7 +909,7 @@ function renderShell() {
       <div class="fd-main">
         <section class="fd-card fd-products-card"><h3 class="fd-card-title">Выберите изделие</h3><div class="fd-products"></div></section>
         <section class="fd-card fd-config"><h2 class="fd-product-name">Выберите изделие</h2><div class="fd-fields"><div class="fd-empty">Слева выберите тип мебели.</div></div><button type="button" class="fd-secondary fd-add-item" disabled>Добавить изделие в КП</button></section>
-        <aside class="fd-card fd-summary"><h3 class="fd-card-title">Текущее КП</h3><div class="fd-current-summary">Конфигурация пока не выбрана.</div><div class="fd-current-price-row" style="display:none"><span>Стоимость изделия</span><strong class="fd-current-price">—</strong></div><div class="fd-divider"></div><div class="fd-cart-title">Добавленные изделия</div><div class="fd-cart-list"><div class="fd-cart-empty">Пока ничего не добавлено.</div></div><div class="fd-divider"></div><div class="fd-price-label">Общий итог</div><div class="fd-price">—</div><button type="button" class="fd-primary fd-get">Оформить КП</button><div class="fd-note">Расчёты соответствуют дизайнерской версии v3.1.</div></aside>
+        <aside class="fd-card fd-summary"><h3 class="fd-card-title">Текущее КП</h3><div class="fd-current-summary">Конфигурация пока не выбрана.</div><div class="fd-current-price-row" style="display:none"><span>Стоимость изделия</span><strong class="fd-current-price">—</strong><button type="button" class="fd-small-btn fd-edit-current-price">Редактировать цену</button></div><div class="fd-divider"></div><div class="fd-cart-title">Добавленные изделия</div><div class="fd-cart-list"><div class="fd-cart-empty">Пока ничего не добавлено.</div></div><div class="fd-divider"></div><div class="fd-price-label">Общий итог</div><div class="fd-price">—</div><button type="button" class="fd-primary fd-get">Оформить КП</button><div class="fd-note">Расчёты соответствуют дизайнерской версии v3.1.</div></aside>
       </div>
       <section class="fd-card fd-manager-panel" id="fd-manager-panel">
         <h2 class="fd-manager-title">Данные коммерческого предложения</h2>
@@ -951,6 +951,7 @@ function renderShell() {
   root.querySelector('.fd-add-item').addEventListener('click', addCurrentItem);
   root.querySelector('.fd-cart-list').addEventListener('click', handleCartAction);
   root.querySelector('.fd-cart-list').addEventListener('change', handleCartQty);
+  root.querySelector('.fd-edit-current-price')?.addEventListener('click',editCurrentCalculatedPrice);
   root.querySelector('.fd-get').addEventListener('click',()=>root.querySelector('#fd-manager-panel').scrollIntoView({behavior:'smooth'}));
   root.querySelector('.fd-open-history').addEventListener('click',()=>root.querySelector('#fd-history').scrollIntoView({behavior:'smooth'}));
   root.querySelector('.fd-new-kp').addEventListener('click', newKp);
@@ -964,8 +965,24 @@ function renderShell() {
   renderHistory();
 }
 
+const _managerCalculateCurrent=calculateCurrent;
+state.manualCurrentPrice=null;
+calculateCurrent=function(){
+  if(state.manualCurrentPrice!==null && state.manualCurrentPrice!==undefined) return Number(state.manualCurrentPrice||0);
+  return _managerCalculateCurrent();
+};
+function editCurrentCalculatedPrice(){
+  if(!state.product)return;
+  const current=Number(calculateCurrent()||0);
+  const raw=window.prompt('Цена изделия для КП, ₽',String(Math.round(current)));
+  if(raw===null)return;
+  const value=Number(String(raw).replace(/\s/g,'').replace(',','.'));
+  if(!Number.isFinite(value)||value<0)return;
+  state.manualCurrentPrice=Math.round(value);
+  update();
+}
 function createCurrentItem(){
-  return {uid:`item_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,productId:state.product.id,productName:state.product.name,values:JSON.parse(JSON.stringify(state.values)),image:state.image?{...state.image}:null,price:calculateCurrent(),quantity:1,summaryRows:currentSummaryRows()};
+  return {uid:`item_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,productId:state.product.id,productName:state.product.name,values:JSON.parse(JSON.stringify(state.values)),image:state.image?{...state.image}:null,price:calculateCurrent(),manualPrice:state.manualCurrentPrice!==null,quantity:1,summaryRows:currentSummaryRows()};
 }
 function addCurrentItem(){
   if(!state.product)return showStatus('Сначала выберите изделие.');
@@ -977,14 +994,15 @@ function totalPrice(){return state.items.reduce((s,i)=>s+Number(i.price||0)*Numb
 function renderCart(){
  const list=root.querySelector('.fd-cart-list'); if(!list)return;
  if(!state.items.length){list.innerHTML='<div class="fd-cart-empty">Пока ничего не добавлено.</div>';return}
- list.innerHTML=state.items.map((item,index)=>`<div class="fd-cart-item"><div><strong>${index+1}. ${esc(item.productName)}</strong><small>${money(Number(item.price||0)*Number(item.quantity||1))}</small><div class="fd-cart-qty"><span>Кол-во</span><input type="number" min="1" value="${Number(item.quantity||1)}" data-qty-uid="${esc(item.uid)}"></div></div><div class="fd-cart-actions"><button type="button" data-edit-uid="${esc(item.uid)}">Редактировать</button><button type="button" class="fd-remove-item" data-uid="${esc(item.uid)}">Удалить</button></div></div>`).join('');
+ list.innerHTML=state.items.map((item,index)=>`<div class="fd-cart-item"><div><strong>${index+1}. ${esc(item.productName)}</strong><small>${money(Number(item.price||0)*Number(item.quantity||1))}</small><div class="fd-cart-qty"><span>Кол-во</span><input type="number" min="1" value="${Number(item.quantity||1)}" data-qty-uid="${esc(item.uid)}"></div></div><div class="fd-cart-actions"><button type="button" data-edit-price-uid="${esc(item.uid)}">Редактировать цену</button><button type="button" data-edit-uid="${esc(item.uid)}">Редактировать</button><button type="button" class="fd-remove-item" data-uid="${esc(item.uid)}">Удалить</button></div></div>`).join('');
 }
-function handleCartAction(e){const rem=e.target.closest('.fd-remove-item');if(rem){removeItem(rem.dataset.uid);updateManagerTotal();return}const ed=e.target.closest('[data-edit-uid]');if(ed)loadItemForEdit(ed.dataset.editUid)}
+function handleCartAction(e){const rem=e.target.closest('.fd-remove-item');if(rem){removeItem(rem.dataset.uid);updateManagerTotal();return}const pr=e.target.closest('[data-edit-price-uid]');if(pr){editItemPrice(pr.dataset.editPriceUid);return}const ed=e.target.closest('[data-edit-uid]');if(ed)loadItemForEdit(ed.dataset.editUid)}
+function editItemPrice(uid){const it=state.items.find(x=>x.uid===uid);if(!it)return;const raw=window.prompt('Цена позиции для КП, ₽',String(Math.round(Number(it.price||0))));if(raw===null)return;const value=Number(String(raw).replace(/\s/g,'').replace(',','.'));if(!Number.isFinite(value)||value<0)return;it.price=Math.round(value);it.manualPrice=true;if(it.sourceType==='site_catalog')it.catalogManualPrice=true;renderCart();updateManagerTotal();}
 function handleCartQty(e){const inp=e.target.closest('[data-qty-uid]');if(!inp)return;const it=state.items.find(x=>x.uid===inp.dataset.qtyUid);if(it){it.quantity=Math.max(1,Number(inp.value||1));renderCart();update()}}
-function loadItemForEdit(uid){const item=state.items.find(x=>x.uid===uid);if(!item)return;selectProduct(item.productId);state.values=JSON.parse(JSON.stringify(item.values||{}));state.image=item.image?{...item.image}:null;state.editingUid=uid;hydrateCurrentControls();root.querySelector('.fd-add-item').textContent='Сохранить изменения изделия';root.querySelector('.fd-product-name').insertAdjacentHTML('beforeend','<span class="fd-editing-badge">редактирование позиции</span>');root.querySelector('.fd-config').scrollIntoView({behavior:'smooth'});update()}
+function loadItemForEdit(uid){const item=state.items.find(x=>x.uid===uid);if(!item)return;selectProduct(item.productId);state.manualCurrentPrice=item.manualPrice?Number(item.price||0):null;state.values=JSON.parse(JSON.stringify(item.values||{}));state.image=item.image?{...item.image}:null;state.editingUid=uid;hydrateCurrentControls();root.querySelector('.fd-add-item').textContent='Сохранить изменения изделия';root.querySelector('.fd-product-name').insertAdjacentHTML('beforeend','<span class="fd-editing-badge">редактирование позиции</span>');root.querySelector('.fd-config').scrollIntoView({behavior:'smooth'});update()}
 function hydrateCurrentControls(){if(!state.product)return;visibleParams().forEach(p=>{const v=state.values[p.id];if(p.inputType==='dimensions'){Object.entries(v||{}).forEach(([k,val])=>{const el=root.querySelector(`[data-param="${CSS.escape(p.id)}"][data-dim="${CSS.escape(k)}"]`);if(el)el.value=val})}else if(p.inputType==='boolean'){const el=root.querySelector(`[data-param="${CSS.escape(p.id)}"]`);if(el)el.checked=!!v}else if(p.inputType==='multi_select_inline'){(Array.isArray(v)?v:[]).forEach(id=>{const el=root.querySelector(`input[data-param="${CSS.escape(p.id)}"][value="${CSS.escape(String(id))}"]`);if(el)el.checked=true})}else if(p.inputType==='single_choice'){const el=root.querySelector(`input[data-param="${CSS.escape(p.id)}"][value="${CSS.escape(String(v??''))}"]`);if(el)el.checked=true}else{const el=root.querySelector(`[data-param="${CSS.escape(p.id)}"]`);if(el)el.value=(v&&typeof v==='object'&&'main'in v)?v.main:(v??'')}});if(state.image?.dataUrl){const pv=root.querySelector('.fd-preview'),im=pv?.querySelector('img');if(pv&&im){im.src=state.image.dataUrl;pv.style.display='block'}}}
 const _resetCurrentConfiguration=resetCurrentConfiguration;
-resetCurrentConfiguration=function(){_resetCurrentConfiguration();state.editingUid=null;const b=root.querySelector('.fd-add-item');if(b)b.textContent='Добавить изделие в КП'};
+resetCurrentConfiguration=function(){_resetCurrentConfiguration();state.editingUid=null;state.manualCurrentPrice=null;const b=root.querySelector('.fd-add-item');if(b)b.textContent='Добавить изделие в КП'};
 
 function managerHeader(){const g=id=>document.getElementById(id);return {kpName:g('kpName')?.value||'Коммерческое предложение',manager:g('managerName')?.value?.trim()||'',managerPhone:g('managerPhone')?.value?.trim()||'',clientName:g('clientName')?.value?.trim()||'',projectName:g('projectName')?.value?.trim()||'',productionDays:Number(g('productionDays')?.value||45),discountPercent:Number(g('discountPercent')?.value||0),deliveryPrice:Number(g('deliveryPrice')?.value||0),showVat:!!g('showVat')?.checked,prepaymentPercent:Number(g('prepaymentPercent')?.value||70),finalPaymentPercent:Number(g('finalPaymentPercent')?.value||30),offerValidDays:Number(g('offerValidDays')?.value||5),deliveryTerms:g('deliveryTerms')?.value?.trim()||''}}
 function managerTotals(){const subtotal=totalPrice();const h=managerHeader();const discount=subtotal*(h.discountPercent/100);const after=subtotal-discount;const vat=h.showVat?after*.22:0;return{subtotal,discount,after,vat,grand:after+vat+h.deliveryPrice}}
